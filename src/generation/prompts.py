@@ -163,11 +163,9 @@ def build_user_message(question: str, retrieved_chunks: list) -> str:
 
 
 REFUSAL_PHRASES = [
-    "I don't have grounded sources",
-    "consult a qualified medical professional",
-    "personalized medical question that requires evaluation",
+    "I don't have grounded sources to answer this question reliably",
+    "This is a personalized medical question that requires evaluation",
 ]
-
 EMERGENCY_PHRASE = "If you or someone is experiencing a medical emergency"
 
 

@@ -1,27 +1,18 @@
 """
-Groq LLM Generator
-==================
-Wraps the Groq API for the generation layer of HealthRAG-IN.
+Medical RAG Generator
+=====================
+Wraps the LLM router for the generation layer of HealthRAG-IN.
 Takes a user question and retrieved chunks, returns a structured
 medical answer with citations.
 
-Loads the GROQ_API_KEY from .env automatically.
-
-Usage:
-    from src.generation.generator import GroqGenerator
-    gen = GroqGenerator()
-    answer = gen.generate(question, retrieved_chunks)
+Now uses the LLM router (Groq primary, Gemini fallback) instead of
+calling Groq directly. The rest of the interface is unchanged.
 
 Run as CLI for a smoke test:
     python -m src.generation.generator
 """
 
-import os
 import re
-from pathlib import Path
-
-from dotenv import load_dotenv
-from groq import Groq
 
 from src.generation.prompts import (
     SYSTEM_PROMPT,
@@ -30,87 +21,71 @@ from src.generation.prompts import (
     is_refusal,
     is_emergency_response,
 )
-
-# Load environment variables from .env at the project root
-load_dotenv()
+from src.generation.llm_router import call_llm, AllProvidersFailedError
 
 
 # --- Configuration ---
 
-# Groq model. Llama 3.3 70B is free, fast, and high-quality.
-# Alternatives if rate-limited: "llama-3.1-8b-instant" (smaller, faster)
-MODEL_NAME = "llama-3.3-70b-versatile"
-
-# Temperature controls randomness. Low = deterministic (what we want for medical RAG).
 TEMPERATURE = 0.1
-
-# Max tokens in the response. ~1500 tokens = ~1100 words, plenty for our format.
 MAX_TOKENS = 1500
-
-# Request timeout in seconds.
-TIMEOUT = 60
 
 
 # --- Generator class ---
 
 class GroqGenerator:
     """
-    Encapsulates the Groq API client and the call/response logic.
-    Loads the API key from .env at init time.
+    The generation layer. Class name kept as 'GroqGenerator' for
+    backward compatibility with existing imports - but now uses
+    the LLM router under the hood.
     """
 
-    def __init__(
-        self,
-        model_name: str = MODEL_NAME,
-        temperature: float = TEMPERATURE,
-        max_tokens: int = MAX_TOKENS,
-    ):
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "GROQ_API_KEY not found.\n"
-                "  Make sure you have a .env file at the project root with:\n"
-                "    GROQ_API_KEY=gsk_your_key_here"
-            )
-
-        self.client = Groq(api_key=api_key, timeout=TIMEOUT)
-        self.model_name = model_name
+    def __init__(self, temperature=TEMPERATURE, max_tokens=MAX_TOKENS):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.prompt_version = PROMPT_VERSION
 
-    def generate(
-        self,
-        question: str,
-        retrieved_chunks: list,
-    ) -> dict:
+    def generate(self, question, retrieved_chunks):
         """
-        Send the question + retrieved chunks to Groq and return a
-        structured response.
+        Send question + retrieved chunks through the router.
 
-        Returns a dict with:
-          - text: the raw response from the LLM
-          - is_refusal: True if the model refused (out-of-scope)
-          - is_emergency: True if the model issued an emergency warning
-          - cited_source_numbers: set of source numbers cited in the response
-          - prompt_version: version tag for evaluation tracking
-          - model_name: which Groq model was used
+        Returns dict with:
+          - text: the LLM's response
+          - is_refusal: True if the response is a refusal
+          - is_emergency: True if it issued an emergency warning
+          - cited_source_numbers: which sources were cited
+          - prompt_version: prompt template version
+          - model_name: which provider answered (groq or gemini)
+          - attempts: list of providers tried
         """
         user_message = build_user_message(question, retrieved_chunks)
 
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_message},
-            ],
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-        )
+        try:
+            result = call_llm(
+                system_prompt=SYSTEM_PROMPT,
+                user_prompt=user_message,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                primary="groq",
+            )
+        except AllProvidersFailedError as e:
+            # Total failure - surface a graceful response
+            return {
+                "text": (
+                    "I'm temporarily unable to generate an answer because all "
+                    "language model providers are currently unavailable. "
+                    "Please try again in a few minutes. The retrieved sources "
+                    "below may still be useful."
+                ),
+                "is_refusal": True,
+                "is_emergency": False,
+                "cited_source_numbers": set(),
+                "prompt_version": self.prompt_version,
+                "model_name": "none",
+                "attempts": list(e.errors.keys()),
+                "error": str(e),
+            }
 
-        response_text = response.choices[0].message.content
-
-        # Extract which source numbers were cited
+        response_text = result["text"]
         cited_numbers = extract_citation_numbers(response_text)
 
         return {
@@ -119,25 +94,16 @@ class GroqGenerator:
             "is_emergency": is_emergency_response(response_text),
             "cited_source_numbers": cited_numbers,
             "prompt_version": self.prompt_version,
-            "model_name": self.model_name,
+            "model_name": result["provider_used"],
+            "attempts": result["attempts"],
         }
 
 
 # --- Citation parsing ---
 
-def extract_citation_numbers(text: str) -> set:
-    """
-    Find all citation markers in the response text.
-
-    Matches patterns like [1], [1, 3], [1,3], [12], etc.
-    Returns a set of integer source numbers that the model cited.
-
-    This is used by the validation layer to check that:
-      1. The model actually cited sources (not just claimed to)
-      2. The cited numbers map to real retrieved chunks
-    """
+def extract_citation_numbers(text):
+    """Find all citation markers like [1], [2,3], [1, 4, 7]."""
     cited = set()
-    # Pattern: [ N (, N)* ] - matches [1], [2,3], [1, 4, 7], etc.
     matches = re.findall(r"\[([\d,\s]+)\]", text)
     for match in matches:
         for num_str in match.split(","):
@@ -147,20 +113,15 @@ def extract_citation_numbers(text: str) -> set:
     return cited
 
 
-# --- Smoke test ---
+# --- Smoke test (DO NOT RUN TODAY - both providers throttled) ---
 
 def main():
-    """
-    Smoke test: confirms the Groq client can authenticate and respond.
-    Sends a tiny dummy request - not the full RAG pipeline.
-    """
     print("=" * 60)
-    print("Groq Generator Smoke Test")
+    print("Generator Smoke Test (with router)")
     print("=" * 60)
 
-    print("\n[1/2] Initializing Groq client...")
+    print("\n[1/2] Initializing generator...")
     gen = GroqGenerator()
-    print(f"  -> Model: {gen.model_name}")
     print(f"  -> Temperature: {gen.temperature}")
     print(f"  -> Prompt version: {gen.prompt_version}")
 
@@ -183,11 +144,12 @@ def main():
     print("\n" + "=" * 60)
     print("METADATA")
     print("=" * 60)
+    print(f"  Provider used: {result['model_name']}")
+    print(f"  Attempts: {result['attempts']}")
     print(f"  Is refusal: {result['is_refusal']}")
     print(f"  Is emergency: {result['is_emergency']}")
     print(f"  Cited source numbers: {result['cited_source_numbers']}")
     print(f"  Prompt version: {result['prompt_version']}")
-    print(f"  Model: {result['model_name']}")
 
 
 if __name__ == "__main__":
