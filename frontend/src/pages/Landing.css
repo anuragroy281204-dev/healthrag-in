@@ -26,15 +26,17 @@
 
 /* HERO */
 .hero {
-  min-height: 100vh;
+  min-height: calc(100vh - 80px); /* adjust for navbar */
   position: relative;
 
   display: grid;
-  place-items: center;   /* 🔥 PERFECT CENTER */
+  place-items: center;
 
-  padding: 0 24px;
+  padding: 0 !important;   /* 🔥 FORCE remove section padding */
+
   z-index: 1;
 }
+
 
 .hero-content {
   display: flex;
@@ -45,14 +47,15 @@
   width: 100%;
   max-width: 900px;
   text-align: center;
+  margin-top: 180px;
   
 }
 
 /* MEDICAL CROSS */
 .medical-cross {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 5%;
+  left: 35%;
   transform: translate(-50%, -50%);
   width: 600px;
   height: 600px;
@@ -180,13 +183,17 @@
 }
 .hero-title {
   font-family: var(--display);
-  font-weight: 400;
+  font-weight: 700;
   font-size: clamp(56px, 11vw, 168px);
   line-height: 0.92;
   letter-spacing: -0.045em;
   text-align: center;
   color: var(--cream);
   margin-bottom: 24px;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.15),
+    0 0 40px rgba(0, 217, 255, 0.25),
+    0 0 80px rgba(0, 217, 255, 0.15);
 }
 .hero-title em {
   font-style: italic;
@@ -295,6 +302,7 @@
   grid-template-columns: repeat(4, 1fr);
   width: 100%;
   max-width: 1100px;
+  margin: 0 auto;
   border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   padding: 28px 0;
@@ -363,7 +371,7 @@ section {
 }
 .section-title {
   font-family: var(--display);
-  font-weight: 400;
+  font-weight: 700;
   font-size: clamp(36px, 5.5vw, 72px);
   line-height: 1;
   letter-spacing: -0.04em;

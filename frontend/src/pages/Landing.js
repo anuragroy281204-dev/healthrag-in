@@ -196,7 +196,10 @@ export default function Landing() {
           </motion.div>
         </div>
 
-        <motion.div
+        
+      </section>
+
+      <motion.div
           className="hero-stats"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,7 +222,6 @@ export default function Landing() {
             <div className="stat-label">Eval metrics</div>
           </div>
         </motion.div>
-      </section>
 
       {/* HOW IT WORKS */}
       <section id="how">
