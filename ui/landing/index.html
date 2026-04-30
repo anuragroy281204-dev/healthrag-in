@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HealthRAG-IN — Grounded Medical Q&A</title>
+<meta name="description" content="A retrieval-augmented Q&A system for diabetes, anchored in real medical evidence from WHO, PubMed, and ICMR." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Manrope:wght@300..800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#top" class="nav-brand">
+    <span class="brand-mark">H</span>
+    HealthRAG<span style="color:var(--cyan)">-IN</span>
+  </a>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#sources">Sources</a>
+    <a href="#why">Why</a>
+  </div>
+  <a href="#cta" class="nav-cta">Begin Consultation →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-eyebrow">
+    <span class="eyebrow-dot"></span>
+    Llama 3.3 · Gemini 2.0 · Live
+  </div>
+
+  <h1 class="hero-title">
+    Medicine,<br>
+    <em>cited.</em>
+  </h1>
+
+  <p class="hero-sub">
+    A grounded medical Q&amp;A system for diabetes — answers come <strong>only</strong>
+    from real clinical evidence, every claim is cited, and personal medical questions
+    are redirected to professionals.
+  </p>
+
+  <div class="hero-actions">
+    <a href="CHAT_URL_HERE" class="btn btn-primary">
+      Begin Consultation
+      <span class="btn-arrow">→</span>
+    </a>
+    <a href="https://github.com/anuragroy281204-dev/healthrag-in" class="btn btn-secondary" target="_blank">
+      View on GitHub
+    </a>
+  </div>
+
+  <div class="citation-rail citation-rail-1">
+    <div class="cite-chip"><span class="cite-chip-num">[1]</span> WHO Fact Sheet</div>
+    <div class="cite-chip"><span class="cite-chip-num">[2]</span> ICMR Guidelines</div>
+    <div class="cite-chip"><span class="cite-chip-num">[3]</span> PubMed 2024</div>
+  </div>
+  <div class="citation-rail citation-rail-2">
+    <div class="cite-chip"><span class="cite-chip-num">[4]</span> NIN Dietary 2024</div>
+    <div class="cite-chip"><span class="cite-chip-num">[5]</span> ICMR STW</div>
+    <div class="cite-chip"><span class="cite-chip-num">[6]</span> Lancet Diabetes</div>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat-block">
+      <div class="stat-num" data-count="490">0</div>
+      <div class="stat-label">Documents</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-num" data-count="1247">0</div>
+      <div class="stat-label">Chunks indexed</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-num">3</div>
+      <div class="stat-label">Sources</div>
+    </div>
+    <div class="stat-block">
+      <div class="stat-num">5</div>
+      <div class="stat-label">Eval metrics</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="section-eyebrow">The Pipeline</div>
+    <h2 class="section-title">From your <em>question</em><br>to a cited answer.</h2>
+
+    <div class="pipeline">
+      <div class="pipe-step reveal">
+        <div class="pipe-num">01 — Retrieve</div>
+        <h3 class="pipe-h">Hybrid Search</h3>
+        <p class="pipe-p">
+          Your question is searched across 1,247 medical chunks using two retrieval methods
+          in parallel. FAISS finds chunks with similar <em>meaning</em> via 384-dimensional
+          embeddings. BM25 finds chunks with the exact <em>terminology</em> you used.
+          Both result lists are fused via Reciprocal Rank Fusion to produce a single
+          ranked top-5.
+        </p>
+        <div class="pipe-tag-row">
+          <div class="pipe-tag">FAISS</div>
+          <div class="pipe-tag">BM25</div>
+          <div class="pipe-tag">RRF</div>
+        </div>
+      </div>
+
+      <div class="pipe-step reveal">
+        <div class="pipe-num">02 — Ground</div>
+        <h3 class="pipe-h">Strict Prompt</h3>
+        <p class="pipe-p">
+          The retrieved chunks are packaged into a versioned system prompt with three
+          non-negotiable rules. Use <em>only</em> these sources. Cite every factual claim
+          with a numbered marker. Refuse explicitly if the sources cannot support the
+          answer. The prompt also blocks personalized medical advice and detects emergencies.
+        </p>
+        <div class="pipe-tag-row">
+          <div class="pipe-tag">Prompt v1.0.0</div>
+          <div class="pipe-tag">Refusal-aware</div>
+          <div class="pipe-tag">Safety guardrails</div>
+        </div>
+      </div>
+
+      <div class="pipe-step reveal">
+        <div class="pipe-num">03 — Generate</div>
+        <h3 class="pipe-h">Resilient Inference</h3>
+        <p class="pipe-p">
+          Llama 3.3 70B (via Groq) writes the answer at temperature 0.1 for deterministic,
+          source-faithful output. If Groq is rate-limited or unavailable, the system
+          automatically falls back to Google Gemini 2.0 Flash. Same prompt, same output
+          contract — only the underlying model changes.
+        </p>
+        <div class="pipe-tag-row">
+          <div class="pipe-tag">Llama 3.3 70B</div>
+          <div class="pipe-tag">Gemini 2.0 Flash</div>
+          <div class="pipe-tag">Auto-failover</div>
+        </div>
+      </div>
+
+      <div class="pipe-step reveal">
+        <div class="pipe-num">04 — Cite</div>
+        <h3 class="pipe-h">Verifiable Output</h3>
+        <p class="pipe-p">
+          Every factual claim ends with a [N] marker. Each marker maps to a real chunk
+          with its source name, document title, and clickable URL. A citation validator
+          checks that no marker points to a chunk that wasn't actually retrieved —
+          catching hallucinated citations before they reach the user.
+        </p>
+        <div class="pipe-tag-row">
+          <div class="pipe-tag">100% verifiable</div>
+          <div class="pipe-tag">Clickable sources</div>
+          <div class="pipe-tag">No hallucinations</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOURCES -->
+<section id="sources">
+  <div class="container">
+    <div class="section-eyebrow">The Corpus</div>
+    <h2 class="section-title">Three trusted<br><em>source families.</em></h2>
+
+    <div class="sources-grid">
+
+      <div class="source-card reveal">
+        <div class="source-logo">
+          <div class="logo-placeholder">WHO</div>
+        </div>
+        <div class="source-meta">
+          <div class="source-name">World Health Organization</div>
+          <div class="source-stat">04 / docs</div>
+        </div>
+        <p class="source-p">
+          Authoritative consumer-facing fact sheets covering diabetes, hypertension,
+          obesity, and cardiovascular disease. Used as the baseline answer source for
+          general questions where a clear, peer-reviewed summary already exists.
+        </p>
+        <div class="source-tags">
+          <span class="src-tag">Diabetes</span>
+          <span class="src-tag">Hypertension</span>
+          <span class="src-tag">Obesity</span>
+          <span class="src-tag">CVD</span>
+        </div>
+        <a href="https://www.who.int/news-room/fact-sheets" target="_blank" class="source-link">who.int →</a>
+      </div>
+
+      <div class="source-card source-card-feature reveal">
+        <div class="source-logo">
+          <div class="logo-placeholder">PubMed</div>
+        </div>
+        <div class="source-meta">
+          <div class="source-name">National Library of Medicine</div>
+          <div class="source-stat">480 / abstracts</div>
+        </div>
+        <p class="source-p">
+          Peer-reviewed diabetes research from 2020 onward, fetched via NCBI's free
+          E-utilities API. Includes Indian-population studies, clinical trial findings,
+          and emerging-evidence reviews — the depth that grounds non-obvious questions.
+        </p>
+        <div class="source-tags">
+          <span class="src-tag">Type 1 / Type 2</span>
+          <span class="src-tag">Gestational</span>
+          <span class="src-tag">Indian cohorts</span>
+          <span class="src-tag">2020–2026</span>
+        </div>
+        <a href="https://pubmed.ncbi.nlm.nih.gov" target="_blank" class="source-link">pubmed.ncbi.nlm.nih.gov →</a>
+      </div>
+
+      <div class="source-card reveal">
+        <div class="source-logo">
+          <div class="logo-placeholder">ICMR</div>
+        </div>
+        <div class="source-meta">
+          <div class="source-name">Indian Council of Medical Research</div>
+          <div class="source-stat">06 / guidelines</div>
+        </div>
+        <p class="source-p">
+          India-specific clinical guidelines and Standard Treatment Workflows. Covers
+          Type 1, Type 2, diabetic foot, ketoacidosis, and the 2024 NIN Dietary
+          Guidelines. The differentiator that makes the system truly relevant to
+          Indian patients and clinicians.
+        </p>
+        <div class="source-tags">
+          <span class="src-tag">STW</span>
+          <span class="src-tag">Diabetic foot</span>
+          <span class="src-tag">DKA</span>
+          <span class="src-tag">NIN 2024</span>
+        </div>
+        <a href="https://www.icmr.gov.in" target="_blank" class="source-link">icmr.gov.in →</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section id="why">
+  <div class="container">
+    <div class="section-eyebrow">Differentiation</div>
+    <h2 class="section-title">Built different,<br><em>on purpose.</em></h2>
+
+    <div class="why-grid">
+
+      <div class="why-card reveal">
+        <div class="why-icon">◎</div>
+        <h3 class="why-h">No hallucinations</h3>
+        <p class="why-p">
+          The system literally cannot invent facts — it can only synthesize what was
+          retrieved. Every claim must trace back to a chunk in the corpus or be
+          refused.
+        </p>
+      </div>
+
+      <div class="why-card reveal">
+        <div class="why-icon">⌖</div>
+        <h3 class="why-h">Refusal-first</h3>
+        <p class="why-p">
+          Out-of-scope and personal-advice questions are explicitly refused, not
+          guessed at. Two layers: a code-level relevance gate, plus the prompt
+          itself enforcing standardized refusal text.
+        </p>
+      </div>
+
+      <div class="why-card reveal">
+        <div class="why-icon">▣</div>
+        <h3 class="why-h">India-aware</h3>
+        <p class="why-p">
+          ICMR guidelines and Indian PubMed studies are surfaced when relevant.
+          HbA1c targets, dosing, and dietary recommendations reflect Indian
+          population data, not Western defaults.
+        </p>
+      </div>
+
+      <div class="why-card reveal">
+        <div class="why-icon">◇</div>
+        <h3 class="why-h">Provider-resilient</h3>
+        <p class="why-p">
+          Multi-provider LLM routing with automatic failover. Groq Llama 3.3 70B
+          primary, Gemini 2.0 Flash secondary. Stays online when one provider
+          rate-limits — production-grade redundancy.
+        </p>
+      </div>
+
+      <div class="why-card reveal">
+        <div class="why-icon">⊞</div>
+        <h3 class="why-h">Measured, not claimed</h3>
+        <p class="why-p">
+          A five-metric LLM-as-judge evaluation harness scores every answer for
+          faithfulness, relevance, context precision, citation accuracy, and
+          refusal correctness. Every release has a published scorecard.
+        </p>
+      </div>
+
+      <div class="why-card reveal">
+        <div class="why-icon">⌬</div>
+        <h3 class="why-h">Open & free</h3>
+        <p class="why-p">
+          Built entirely on free-tier APIs and open-source libraries. Source
+          available on GitHub. Zero rupee operational cost, zero paywalled
+          dependencies.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta" class="cta-section">
+  <div class="container cta-container">
+    <h2 class="cta-title">
+      Ask your first<br><em>question.</em>
+    </h2>
+    <p class="cta-p">
+      Real medical sources. Real citations. Real refusals when we don't know.
+    </p>
+    <a href="CHAT_URL_HERE" class="btn btn-primary btn-large">
+      Begin Consultation
+      <span class="btn-arrow">→</span>
+    </a>
+    <p class="cta-disclaimer">
+      Educational tool. Not medical advice. Always consult a qualified physician.
+    </p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container footer-container">
+    <div>
+      <div class="nav-brand">
+        <span class="brand-mark">H</span>
+        HealthRAG<span style="color:var(--cyan)">-IN</span>
+      </div>
+      <p class="footer-p">
+        Built by Anurag Roy — B.Tech CSE (Data Science), Amity University Noida.
+      </p>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/anuragroy281204-dev/healthrag-in" target="_blank">GitHub</a>
+      <a href="mailto:royanurag281204@gmail.com">Contact</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2026 HealthRAG-IN · Educational use only · Not a substitute for medical advice
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
