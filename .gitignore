@@ -16,7 +16,7 @@ env/
 
 # Data files (too big for GitHub)
 data/raw/
-data/processed/
+
 *.db
 *.sqlite
 
