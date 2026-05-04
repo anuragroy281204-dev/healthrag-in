@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Chat.css';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = process.env.NODE_ENV === 'production'
+  ? 'https://onorog-healthrag-in-api.hf.space'
+  : 'http://localhost:8000';
 
 const SAMPLE_QUESTIONS = [
   'What is HbA1c and why does it matter?',
