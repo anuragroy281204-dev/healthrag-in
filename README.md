@@ -1,19 +1,26 @@
-# HealthRAG-IN
+---
+title: HealthRAG-IN API
+emoji: 🩺
+colorFrom: blue
+colorTo: cyan
+sdk: docker
+pinned: false
+---
 
-A grounded medical Q&A system over peer-reviewed literature and Indian public health resources, with a hallucination-evaluation harness.
+# HealthRAG-IN API
 
-## Status
-🚧 Under active development.
+FastAPI backend for HealthRAG-IN — a grounded medical Q&A system for diabetes.
 
-## Tech Stack
-- Python 3.10+
-- ChromaDB (vector database)
-- Sentence-Transformers (embeddings)
-- Groq API (LLM)
-- FastAPI + Streamlit
+## Endpoints
 
-## Setup
-Coming soon.
+- `GET /health` — health check
+- `GET /stats` — corpus statistics  
+- `POST /ask` — ask a medical question
 
-## Author
-Anurag Roy
+## Stack
+
+- FastAPI + Uvicorn
+- FAISS semantic search
+- BM25 keyword search
+- Reciprocal Rank Fusion
+- Llama 3.3 70B (Groq) + Gemini 2.0 Flash fallback
