@@ -2,7 +2,7 @@
 title: HealthRAG-IN API
 emoji: 🩺
 colorFrom: blue
-colorTo: cyan
+colorTo: green
 sdk: docker
 pinned: false
 ---
