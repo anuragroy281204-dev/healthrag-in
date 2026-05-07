@@ -69,6 +69,32 @@ def root():
 def health():
     return {"status": "healthy"}
 
+@app.get("/debug")
+def debug():
+    import os
+    result = {}
+    paths_to_check = [
+        "data/processed/faiss/index.faiss",
+        "/data/processed/faiss/index.faiss",
+        "/app/data/processed/faiss/index.faiss",
+        "/home/user/data/processed/faiss/index.faiss",
+    ]
+    for p in paths_to_check:
+        result[p] = os.path.exists(p)
+    
+    # Also list what's in /app
+    try:
+        result["app_contents"] = os.listdir("/app")
+    except:
+        result["app_contents"] = "error"
+    
+    try:
+        result["app_data"] = os.listdir("/app/data") if os.path.exists("/app/data") else "no /app/data"
+    except:
+        result["app_data"] = "error"
+        
+    return result
+
 
 @app.get("/stats")
 def stats():
