@@ -1,6 +1,7 @@
 """FastAPI backend for HealthRAG-IN."""
 
 import sys
+import os
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -10,14 +11,63 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-from src.generation.answer import RAGPipeline
+# ── Download data files from HF Space storage on startup ──
+def download_data_files():
+    """Download processed data files from HF Space repo if not present locally."""
+    faiss_path = Path("data/processed/faiss/index.faiss")
+    if faiss_path.exists():
+        print("[startup] Data files already present, skipping download.")
+        return
 
+    print("[startup] Data files not found locally. Downloading from HF Space storage...")
+    try:
+        from huggingface_hub import hf_hub_download, HfApi
+        import shutil
+
+        repo_id = "onorog/healthrag-in-api"
+        repo_type = "space"
+
+        files_to_download = [
+            "data/processed/chunks.jsonl",
+            "data/processed/embeddings.npz",
+            "data/processed/faiss/index.faiss",
+            "data/processed/faiss/metadata.json",
+        ]
+
+        for file_path in files_to_download:
+            print(f"[startup] Downloading {file_path}...")
+            local_path = Path(file_path)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+
+            downloaded = hf_hub_download(
+                repo_id=repo_id,
+                filename=file_path,
+                repo_type=repo_type,
+                local_dir=".",
+            )
+            print(f"[startup] Downloaded {file_path}")
+
+        print("[startup] All data files downloaded successfully.")
+
+    except Exception as e:
+        print(f"[startup] ERROR downloading data files: {e}")
+        raise RuntimeError(f"Cannot start without data files: {e}")
+
+download_data_files()
+
+# ── Now import the pipeline (after data files are ready) ──
+from src.generation.answer import RAGPipeline
 
 app = FastAPI(title="HealthRAG-IN API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "https://healthrag-in.vercel.app", "https://*.vercel.app", ],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://healthrag-in.vercel.app",
+        "https://*.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,30 +119,25 @@ def root():
 def health():
     return {"status": "healthy"}
 
+
 @app.get("/debug")
 def debug():
     import os
     result = {}
     paths_to_check = [
         "data/processed/faiss/index.faiss",
-        "/data/processed/faiss/index.faiss",
         "/app/data/processed/faiss/index.faiss",
-        "/home/user/data/processed/faiss/index.faiss",
     ]
     for p in paths_to_check:
         result[p] = os.path.exists(p)
-    
-    # Also list what's in /app
     try:
         result["app_contents"] = os.listdir("/app")
     except:
         result["app_contents"] = "error"
-    
     try:
-        result["app_data"] = os.listdir("/app/data") if os.path.exists("/app/data") else "no /app/data"
+        result["app_data"] = os.listdir("/app/data/processed") if os.path.exists("/app/data/processed") else "missing"
     except:
         result["app_data"] = "error"
-        
     return result
 
 
