@@ -6,56 +6,46 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+def download_data_files():
+    faiss_path = Path("data/processed/faiss/index.faiss")
+    if faiss_path.exists():
+        print("[startup] Data files already present.")
+        return
+
+    print("[startup] Downloading data files from GitHub Releases...")
+    import requests
+
+    BASE = "https://github.com/anuragroy281204-dev/healthrag-in/releases/download/v1.0.0-data"
+
+    files = [
+        (f"{BASE}/chunks.jsonl",   "data/processed/chunks.jsonl"),
+        (f"{BASE}/embeddings.npz", "data/processed/embeddings.npz"),
+        (f"{BASE}/index.faiss",    "data/processed/faiss/index.faiss"),
+        (f"{BASE}/metadata.json",  "data/processed/faiss/metadata.json"),
+    ]
+
+    for url, local_path_str in files:
+        print(f"[startup] Downloading {local_path_str}...")
+        local_path = Path(local_path_str)
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with requests.get(url, stream=True, allow_redirects=True) as r:
+            r.raise_for_status()
+            with open(local_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        size_kb = local_path.stat().st_size // 1024
+        print(f"[startup] {local_path_str} ready ({size_kb} KB)")
+
+    print("[startup] All files downloaded.")
+
+download_data_files()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-
-# ── Download data files from HF Space storage on startup ──
-def download_data_files():
-    """Download processed data files from HF Space repo if not present locally."""
-    faiss_path = Path("data/processed/faiss/index.faiss")
-    if faiss_path.exists():
-        print("[startup] Data files already present, skipping download.")
-        return
-
-    print("[startup] Data files not found locally. Downloading from HF Space storage...")
-    try:
-        from huggingface_hub import hf_hub_download, HfApi
-        import shutil
-
-        repo_id = "onorog/healthrag-in-api"
-        repo_type = "space"
-
-        files_to_download = [
-            "data/processed/chunks.jsonl",
-            "data/processed/embeddings.npz",
-            "data/processed/faiss/index.faiss",
-            "data/processed/faiss/metadata.json",
-        ]
-
-        for file_path in files_to_download:
-            print(f"[startup] Downloading {file_path}...")
-            local_path = Path(file_path)
-            local_path.parent.mkdir(parents=True, exist_ok=True)
-
-            downloaded = hf_hub_download(
-                repo_id=repo_id,
-                filename=file_path,
-                repo_type=repo_type,
-                local_dir=".",
-            )
-            print(f"[startup] Downloaded {file_path}")
-
-        print("[startup] All data files downloaded successfully.")
-
-    except Exception as e:
-        print(f"[startup] ERROR downloading data files: {e}")
-        raise RuntimeError(f"Cannot start without data files: {e}")
-
-download_data_files()
-
-# ── Now import the pipeline (after data files are ready) ──
 from src.generation.answer import RAGPipeline
 
 app = FastAPI(title="HealthRAG-IN API", version="1.0.0")
@@ -88,22 +78,13 @@ class AskRequest(BaseModel):
     source_filter: Optional[str] = None
 
 
-class ChunkOut(BaseModel):
-    chunk_id: str
-    score: float
-    source: str
-    title: str
-    url: str
-    text: str
-
-
 class AskResponse(BaseModel):
     question: str
     answer: str
     is_refusal: bool
     is_emergency: bool
     cited_sources: list
-    retrieved_chunks: list[ChunkOut]
+    retrieved_chunks: list
     provider: str
     retrieval_time_sec: float
     generation_time_sec: float
@@ -120,27 +101,6 @@ def health():
     return {"status": "healthy"}
 
 
-@app.get("/debug")
-def debug():
-    import os
-    result = {}
-    paths_to_check = [
-        "data/processed/faiss/index.faiss",
-        "/app/data/processed/faiss/index.faiss",
-    ]
-    for p in paths_to_check:
-        result[p] = os.path.exists(p)
-    try:
-        result["app_contents"] = os.listdir("/app")
-    except:
-        result["app_contents"] = "error"
-    try:
-        result["app_data"] = os.listdir("/app/data/processed") if os.path.exists("/app/data/processed") else "missing"
-    except:
-        result["app_data"] = "error"
-    return result
-
-
 @app.get("/stats")
 def stats():
     return {
@@ -150,7 +110,17 @@ def stats():
     }
 
 
-@app.post("/ask", response_model=AskResponse)
+@app.get("/debug")
+def debug():
+    paths = [
+        "data/processed/faiss/index.faiss",
+        "data/processed/chunks.jsonl",
+        "data/processed/embeddings.npz",
+    ]
+    return {p: Path(p).exists() for p in paths}
+
+
+@app.post("/ask")
 def ask(req: AskRequest):
     if not req.question or not req.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
