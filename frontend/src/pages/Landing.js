@@ -11,10 +11,6 @@ import React, { useState, useEffect, useRef } from "react";
 //   - HealthRAG-IN is the unmistakable hero — large, centered, owned
 // ─────────────────────────────────────────────────────────────
 
-const API_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://onorog-healthrag-in-api.hf.space"
-    : "http://localhost:8000";
 
 function useCountUp(target, duration = 1600, start = false) {
   const [value, setValue] = useState(0);
